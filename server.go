@@ -331,7 +331,7 @@ func procConnect(conn net.Conn, atyp uint8, dstAddr net.IP, dstPort int) {
 	// connect ok
 	local := rmtConn.LocalAddr().(*net.TCPAddr)
 	fmt.Printf("bind addr is : %v\n", local)
-	if err := sendCmdReply(conn, cmdRepSucceeded, atyp, local.IP, local.Port); err != nil {
+	if err := sendCmdReply(conn, cmdRepSucceeded, local.IP, local.Port); err != nil {
 		fmt.Println("error send reply: ", err.Error())
 		return
 	} else {
@@ -359,18 +359,22 @@ func forward(dst, src net.Conn, wg *sync.WaitGroup) {
 	fmt.Printf("Copied %d bytes from %s to %s.\n", n, src.LocalAddr().String(), dst.LocalAddr().String())
 }
 
-func sendCmdReply(conn net.Conn, rep, atyp uint8, ip net.IP, port int) error {
+func sendCmdReply(conn net.Conn, rep uint8, ip net.IP, port int) error {
 	var addr []byte
 
 	p1 := byte((port & 0xff00) >> 8)
 	p2 := byte(port & 0xff)
-	msg := []byte{socks5Version, rep, 0x00, atyp}
+	atyp := byte(0x00)
+	msg := []byte{socks5Version, rep, 0x00}
 
 	if ip.To4() != nil { // v4
 		addr = []byte(ip.To4())
+		atyp = atypIPV4
 	} else { // v6
 		addr = []byte(ip.To16())
+		atyp = atypIPV4
 	}
+	msg = append(msg, atyp)
 	msg = append(msg, addr...)
 	msg = append(msg, p1, p2)
 	_, err := conn.Write(msg)
