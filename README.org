@@ -1,0 +1,5 @@
+* About
+
+  This repository implement a simple socks5 server and client according to rfc1928(partially), rfc1929
+  
+  Only support TCP CONNECT currently
