@@ -112,7 +112,7 @@ func sendMethodNegotiate(conn net.Conn) bool {
 	buff := make([]byte, 3)
 	buff[0] = socks5Version
 	buff[1] = 1
-	buff[2] = authNone
+	buff[2] = authUsrPwd
 	_, err := conn.Write(buff)
 	if err != nil {
 		fmt.Printf("error sendMethodNegotiate : %s\n", err.Error())
@@ -230,13 +230,11 @@ func usrPwdNegotiate(conn net.Conn) bool {
 	ver := authNegotiateVer
 	ulen := uint8(len(usr))
 	plen := uint8(len(pwd))
-	ub := []byte(usr)
-	pb := []byte(pwd)
 
 	buff := []byte{ver, ulen}
-	buff = append(buff, ub...)
+	buff = append(buff, []byte(usr)...)
 	buff = append(buff, plen)
-	buff = append(buff, pb...)
+	buff = append(buff, []byte(pwd)...)
 	_, err := conn.Write(buff)
 	if err != nil {
 		fmt.Printf("error send usr/pwd : %s\n", err.Error())
@@ -261,7 +259,7 @@ func usrPwdNegotiateResult(conn net.Conn) bool {
 
 	// auth result
 	if buff[1] != authOK {
-		fmt.Println("auth failed!")
+		fmt.Println("auth failed:")
 		return false
 	}
 	return true

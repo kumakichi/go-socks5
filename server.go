@@ -133,7 +133,7 @@ func authenticate(conn net.Conn) bool {
 			}
 		case authUsrPwd:
 			fmt.Println("Check usr/pwd ...")
-			return subNegotiation(conn, conn)
+			return subNegotiation(conn)
 		}
 	}
 
@@ -143,10 +143,10 @@ func authenticate(conn net.Conn) bool {
 	return false
 }
 
-func subNegotiation(c net.Conn, conn io.Reader) bool {
-	_, err := c.Write([]uint8{socks5Version, authUsrPwd})
+func subNegotiation(conn net.Conn) bool {
+	_, err := conn.Write([]uint8{socks5Version, authUsrPwd})
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("subNegotiation write: %s\n", err.Error())
 		return false
 	}
 
@@ -155,12 +155,12 @@ func subNegotiation(c net.Conn, conn io.Reader) bool {
 	ver := make([]uint8, 1)
 	_, err = io.ReadAtLeast(conn, ver, 1)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("subNegotiation read: %s\n", err.Error())
 		return false
 	}
 
 	if ver[0] != negotiationVer {
-		fmt.Printf("Invalid negotiation version: %0x,should be %0x\n", ver[0], negotiationVer)
+		fmt.Printf("invalid negotiation version: %0x,should be %0x\n", ver[0], negotiationVer)
 		return false
 	}
 
@@ -168,7 +168,7 @@ func subNegotiation(c net.Conn, conn io.Reader) bool {
 	usrLen := make([]uint8, 1)
 	_, err = io.ReadAtLeast(conn, usrLen, 1)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("subNegotiation usr: %s\n", err.Error())
 		return false
 	}
 
@@ -180,7 +180,7 @@ func subNegotiation(c net.Conn, conn io.Reader) bool {
 	pwdLen := make([]uint8, 1)
 	_, err = io.ReadAtLeast(conn, pwdLen, 1)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("subNegotiation pwd: %s\n", err.Error())
 		return false
 	}
 
@@ -190,16 +190,17 @@ func subNegotiation(c net.Conn, conn io.Reader) bool {
 
 	// validate usr pwd
 	ok := validateUsrPwd(string(usr), string(pwd))
-	if ok {
-		_, err = c.Write([]byte{negotiationVer, authFail})
+	if !ok {
+		_, err = conn.Write([]byte{negotiationVer, authFail})
 	} else {
-		_, err = c.Write([]byte{negotiationVer, authOK})
+		_, err = conn.Write([]byte{negotiationVer, authOK})
 	}
 
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("subNegotiation validate: %s\n", err.Error())
 		return false
 	}
+	fmt.Println("auth usr pwd ok:", string(usr), string(pwd))
 	return true
 }
 
@@ -228,7 +229,7 @@ func procRequest(conn net.Conn) {
 	buff := make([]uint8, 3)
 	_, err := io.ReadAtLeast(conn, buff, 3)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("procRequest ver:", err.Error())
 		return
 	}
 	if buff[0] != socks5Version {
@@ -244,7 +245,7 @@ func procRequest(conn net.Conn) {
 	abuff := make([]byte, 1)
 	_, err = io.ReadAtLeast(conn, abuff, 1)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("procRequest atyp:", err.Error())
 		return
 	}
 	atyp := abuff[0]
